@@ -21,11 +21,8 @@ export default function DocumentPage(): JSX.Element {
     setLoading(true)
     setError('')
     
-    // For local dev: use backend (http://localhost:8000/documents/:id)
-    // For Vercel production: use /api/documents/:id (serverless function)
-    const apiUrl = window.location.hostname === 'localhost' 
-      ? `http://localhost:8000/documents/${encodeURIComponent(id)}`
-      : `/api/documents/${encodeURIComponent(id)}`
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://legal-documentation-backend-wfkp.onrender.com'
+    const apiUrl = `${apiBaseUrl}/api/documents/${encodeURIComponent(id)}`
     
     fetch(apiUrl)
       .then(async (res) => {
@@ -35,7 +32,7 @@ export default function DocumentPage(): JSX.Element {
       .then((data) => setDoc(data))
       .catch((e) => {
         console.error('Document fetch error:', e)
-        setError(e.message || 'Error fetching document. Make sure the backend is running on port 8000 or deploy to Vercel.')
+        setError(e.message || 'Error fetching document. Please check that the backend API is accessible.')
       })
       .finally(() => setLoading(false))
   }, [id])

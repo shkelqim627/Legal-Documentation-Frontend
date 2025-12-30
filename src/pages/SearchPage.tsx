@@ -20,7 +20,6 @@ export default function SearchPage(): JSX.Element {
   const navigate = useNavigate()
   const [documents, setDocuments] = useState<Doc[]>([])
   const [isFallback, setIsFallback] = useState(false)
-  const [diag, setDiag] = useState<{ count: number; ids?: string[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -30,11 +29,8 @@ export default function SearchPage(): JSX.Element {
     setLoading(true)
     setError('')
     
-    // For local dev: use proxy to backend (http://localhost:8000/generate)
-    // For Vercel production: use /api/generate (serverless function)
-    const apiUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:8000/generate'
-      : '/api/generate'
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://legal-documentation-backend-wfkp.onrender.com'
+    const apiUrl = `${apiBaseUrl}/api/generate`
     
     fetch(apiUrl, {
       method: 'POST',
@@ -47,13 +43,14 @@ export default function SearchPage(): JSX.Element {
         return JSON.parse(txt)
       })
       .then((data) => {
-        console.log('Search results', { query: q, count: (data.documents || []).length, docs: (data.documents || []).map((d:any)=>d.id) })
-        setDocuments(data.documents || [])
-        setIsFallback((data.documents && data.documents.length > 0 && !!data.documents[0].fallback) || false)
+        const results = data.results || data.documents || []
+        console.log('Search results', { query: q, count: results.length, docs: results.map((d:any)=>d.id) })
+        setDocuments(results)
+        setIsFallback((results.length > 0 && !!results[0].fallback) || false)
       })
       .catch((e) => {
         console.error('Search error:', e)
-        setError(e.message || 'An error occurred. Make sure the backend is running on port 8000 or deploy to Vercel.')
+        setError(e.message || 'An error occurred connecting to the backend API.')
       })
       .finally(() => setLoading(false))
   }, [query])
@@ -67,21 +64,11 @@ export default function SearchPage(): JSX.Element {
     <div>
       <h2 className="text-xl font-semibold mb-3 text-slate-100">Search results for "{query}"</h2>
       
-      <div className="mb-4">
-        <button
-          className="text-sm px-3 py-1 rounded bg-slate-700 text-slate-100 hover:bg-slate-600 transition-colors"
-          onClick={() => {
-            const apiUrl = window.location.hostname === 'localhost' 
-              ? 'http://localhost:8000/documents'
-              : '/api/documents'
-            fetch(`${apiUrl}?query=${encodeURIComponent(query)}`)
-              .then((r) => r.json())
-              .then((data) => setDiag({ count: data.count || 0, ids: (data.documents || []).slice(0, 10).map((d: any) => d.id) }))
-              .catch(() => setDiag({ count: 0 }))
-          }}
-        >Check direct matches</button>
-        {diag && <div className="text-sm text-slate-300 mt-2">Direct matches: {diag.count} {diag.ids && diag.ids.length > 0 ? ` — ids: ${diag.ids.join(',')}` : ''}</div>}
-      </div>
+      {documents.length > 0 && (
+        <div className="mb-4 text-sm text-slate-300">
+          Found {documents.length} document{documents.length !== 1 ? 's' : ''} matching your query
+        </div>
+      )}
       
       <SearchInput initial={query} onSearch={handleInlineSearch} />
       {loading && <div className="status p-3 bg-blue-900/20 rounded text-blue-300">Loading…</div>}
@@ -89,9 +76,7 @@ export default function SearchPage(): JSX.Element {
         <div className="error p-3 bg-red-900/20 rounded border border-red-500/50">
           <strong className="text-red-300">Error:</strong> <span className="text-red-200">{error}</span>
           <div className="text-sm mt-2 text-red-300">
-            {window.location.hostname === 'localhost' 
-              ? 'Make sure the backend is running: cd backend && npm run dev'
-              : 'If deployed to Vercel, check that API routes are configured correctly.'}
+            Please check that the backend API is accessible and try again.
           </div>
         </div>
       )}
