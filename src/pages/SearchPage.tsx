@@ -29,7 +29,7 @@ export default function SearchPage(): JSX.Element {
     setLoading(true)
     setError('')
     
-    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://legal-documentation-backend-wfkp.onrender.com'
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://legal-documentation-backend-1-6seq.onrender.com'
     const apiUrl = `${apiBaseUrl}/api/generate`
     
     fetch(apiUrl, {
